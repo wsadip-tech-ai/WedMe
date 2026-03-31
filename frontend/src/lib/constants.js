@@ -1,1 +1,1 @@
-export const ADMIN_EMAILS = ['wsadip@gmail.com', 'auricle@gmail.com']
+export const ADMIN_EMAIL = 'wsadip@gmail.com'
