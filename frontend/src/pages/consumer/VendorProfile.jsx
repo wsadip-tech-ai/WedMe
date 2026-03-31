@@ -569,7 +569,6 @@ export default function VendorProfile() {
   const [lightbox,      setLightbox]      = useState(null) // { url, caption }
   const [showEnquiry,   setShowEnquiry]   = useState(false)
   const [showAIChat,    setShowAIChat]    = useState(false)
-  const [showBookNow,   setShowBookNow]   = useState(false)
 
   useEffect(() => {
     async function load() {
@@ -674,7 +673,7 @@ export default function VendorProfile() {
               </button>
             )}
             <button
-              onClick={() => { if (!user) { show('Sign in to book', 'error'); return } setShowBookNow(true) }}
+              onClick={() => document.getElementById('availability-section')?.scrollIntoView({ behavior: 'smooth' })}
               style={enquiryBtn}
             >
               Book Now
@@ -839,18 +838,6 @@ export default function VendorProfile() {
           preEndHour={bookingEnd}
           onClose={() => { setBookingDate(null); setBookingStart(null); setBookingEnd(null) }}
           onSuccess={() => { setBookingDate(null); setBookingStart(null); setBookingEnd(null) }}
-        />
-      )}
-
-      {/* ── Book Now Modal ────────────────────────────────────────── */}
-      {showBookNow && (
-        <BookingModal
-          vendor={vendor}
-          packages={packages}
-          availability={availability}
-          selectedDate={null}
-          onClose={() => setShowBookNow(false)}
-          onSuccess={() => setShowBookNow(false)}
         />
       )}
 
