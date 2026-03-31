@@ -49,7 +49,7 @@ export default function AdminVendorList() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   const [status, setStatus] = useState('All')
-  const { addToast } = useToastStore()
+  const addToast = useToastStore(s => s.show)
 
   async function fetchVendors() {
     setLoading(true)

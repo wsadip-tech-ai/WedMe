@@ -35,7 +35,7 @@ export default function AdminCustomerList() {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const { addToast } = useToastStore()
+  const addToast = useToastStore(s => s.show)
 
   async function fetchCustomers() {
     setLoading(true)

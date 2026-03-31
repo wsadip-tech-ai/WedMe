@@ -94,7 +94,7 @@ function EmptyState({ message }) {
 export default function AdminVendorDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addToast } = useToastStore()
+  const addToast = useToastStore(s => s.show)
 
   const [vendor, setVendor] = useState(null)
   const [activeTab, setActiveTab] = useState('profile')

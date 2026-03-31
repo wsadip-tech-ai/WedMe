@@ -93,7 +93,7 @@ function EmptyState({ message }) {
 export default function AdminCustomerDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { addToast } = useToastStore()
+  const addToast = useToastStore(s => s.show)
 
   const [customer, setCustomer] = useState(null)
   const [activeTab, setActiveTab] = useState('profile')
