@@ -38,22 +38,37 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
     setSending(true)
 
     try {
-      console.log('[AIChatModal] Sending to edge function, vendor:', vendor.id)
-      const { data, error } = await supabase.functions.invoke('chat', {
-        body: {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) throw new Error('Not signed in')
+
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+      const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+      console.log('[AIChatModal] Sending to edge function, vendor:', vendor.id, 'anonKey starts with:', anonKey?.substring(0, 10))
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+          'apikey': anonKey,
+        },
+        body: JSON.stringify({
           vendor_id: vendor.id,
           session_id: sessionId,
           message: messageText.trim(),
-        },
+        }),
       })
 
-      if (error) {
-        console.error('[AIChatModal] Edge function error:', error)
-        throw new Error(error.message || 'Edge function failed')
+      const responseText = await res.text()
+      console.log('[AIChatModal] Response status:', res.status, 'body:', responseText)
+
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}: ${responseText}`)
       }
 
-      if (data?.error) {
-        console.error('[AIChatModal] API error:', data.error)
+      const data = JSON.parse(responseText)
+
+      if (data.error) {
         throw new Error(data.error)
       }
 
@@ -81,6 +96,27 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
 
   function handleSuggestedQuestion(q) {
     sendMessage(q)
+  }
+
+  const [escalated, setEscalated] = useState(false)
+
+  async function handleEscalate() {
+    if (!sessionId || escalated) return
+    try {
+      // Flag the session for vendor attention
+      await supabase.from('chat_sessions').update({ needs_vendor: true }).eq('id', sessionId)
+      // Add a system-style message so vendor sees context
+      await supabase.from('chat_messages').insert({
+        session_id: sessionId,
+        role: 'customer',
+        content: '📩 I would like to speak with the vendor directly about this.',
+      })
+      setMessages(prev => [...prev, { role: 'assistant', content: '✅ Your request has been sent to the vendor. They will reply here in this chat. You can check back anytime!' }])
+      setEscalated(true)
+      showToast('Vendor has been notified!')
+    } catch {
+      showToast('Failed to notify vendor', 'error')
+    }
   }
 
   const canSend = input.trim().length > 0 && !sending
@@ -226,14 +262,13 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
               }}
             >
               {msg.role === 'assistant' && (
-                <div
-                  style={{
-                    fontSize: '0.65rem',
-                    color: 'var(--cream-muted)',
-                    marginBottom: '0.2rem',
-                  }}
-                >
+                <div style={{ fontSize: '0.65rem', color: 'var(--cream-muted)', marginBottom: '0.2rem' }}>
                   🤖 AI Assistant
+                </div>
+              )}
+              {msg.role === 'vendor' && (
+                <div style={{ fontSize: '0.65rem', color: '#4caf7d', marginBottom: '0.2rem' }}>
+                  💼 {vendor.name}
                 </div>
               )}
               <div
@@ -243,6 +278,14 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
                         background: 'rgba(200,150,60,0.15)',
                         border: '1px solid rgba(200,150,60,0.2)',
                         borderRadius: '12px 12px 2px 12px',
+                        padding: '0.6rem 0.85rem',
+                        maxWidth: '80%',
+                      }
+                    : msg.role === 'vendor'
+                    ? {
+                        background: 'rgba(76,175,125,0.12)',
+                        border: '1px solid rgba(76,175,125,0.2)',
+                        borderRadius: '12px 12px 12px 2px',
                         padding: '0.6rem 0.85rem',
                         maxWidth: '80%',
                       }
@@ -365,23 +408,29 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
           </div>
 
           {/* Escalation link */}
-          <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-            <span style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
-              Need a human?{' '}
-            </span>
-            <span
-              onClick={onEscalate}
-              style={{
-                color: 'var(--gold)',
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                textDecoration: 'underline',
-                textUnderlineOffset: '2px',
-              }}
-            >
-              Send enquiry to vendor →
-            </span>
-          </div>
+          {sessionId && !escalated ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+              <span style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
+                Need a human?{' '}
+              </span>
+              <span
+                onClick={handleEscalate}
+                style={{
+                  color: 'var(--gold)',
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                  textUnderlineOffset: '2px',
+                }}
+              >
+                Ask vendor to reply →
+              </span>
+            </div>
+          ) : escalated ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+              <span style={{ color: '#4caf7d', fontSize: '0.78rem' }}>✓ Vendor notified — they'll reply here</span>
+            </div>
+          ) : null}
         </div>
       </div>
 

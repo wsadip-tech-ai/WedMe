@@ -867,7 +867,6 @@ export default function VendorProfile() {
         <AIChatModal
           vendor={vendor}
           onClose={() => setShowAIChat(false)}
-          onEscalate={() => { setShowAIChat(false); setShowEnquiry(true) }}
         />
       )}
     </main>

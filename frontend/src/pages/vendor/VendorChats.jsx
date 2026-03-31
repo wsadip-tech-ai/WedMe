@@ -76,12 +76,13 @@ export default function VendorChats() {
               <div>
                 <p style={{ color: 'var(--cream)', fontSize: '0.92rem', fontWeight: 500, marginBottom: '0.2rem' }}>
                   {session.profiles?.full_name || 'Anonymous Customer'}
+                  {session.needs_vendor && <span style={{ marginLeft: '0.5rem', background: 'rgba(251,188,5,0.15)', color: '#fbbc05', fontSize: '0.68rem', padding: '0.12rem 0.45rem', borderRadius: '99px' }}>Needs reply</span>}
                 </p>
                 <p style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
                   {new Date(session.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
                 </p>
               </div>
-              <span style={{ color: 'var(--gold)', fontSize: '0.88rem', flexShrink: 0 }}>View →</span>
+              <span style={{ color: session.needs_vendor ? '#fbbc05' : 'var(--gold)', fontSize: '0.88rem', flexShrink: 0 }}>{session.needs_vendor ? 'Reply →' : 'View →'}</span>
             </Link>
           ))}
         </div>
