@@ -39,6 +39,10 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
 
     try {
       const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        throw new Error('Not signed in')
+      }
+      console.log('[AIChatModal] Sending to edge function, vendor:', vendor.id)
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
         method: 'POST',
         headers: {
@@ -53,9 +57,16 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
         }),
       })
 
+      if (!res.ok) {
+        const errText = await res.text()
+        console.error('[AIChatModal] Edge function error:', res.status, errText)
+        throw new Error(`Server error: ${res.status}`)
+      }
+
       const data = await res.json()
 
       if (data.error) {
+        console.error('[AIChatModal] API error:', data.error)
         throw new Error(data.error)
       }
 
@@ -64,7 +75,8 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
         { role: 'assistant', content: data.response },
       ])
       setSessionId(data.session_id)
-    } catch {
+    } catch (err) {
+      console.error('[AIChatModal] Error:', err)
       showToast('Failed to get response', 'error')
       // Remove the optimistic customer message
       setMessages((prev) => prev.filter((m) => m !== optimisticMsg))
