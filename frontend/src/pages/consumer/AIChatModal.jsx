@@ -38,34 +38,21 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
     setSending(true)
 
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session?.access_token) {
-        throw new Error('Not signed in')
-      }
       console.log('[AIChatModal] Sending to edge function, vendor:', vendor.id)
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${session.access_token}`,
-          'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
-        },
-        body: JSON.stringify({
+      const { data, error } = await supabase.functions.invoke('chat', {
+        body: {
           vendor_id: vendor.id,
           session_id: sessionId,
           message: messageText.trim(),
-        }),
+        },
       })
 
-      if (!res.ok) {
-        const errText = await res.text()
-        console.error('[AIChatModal] Edge function error:', res.status, errText)
-        throw new Error(`Server error: ${res.status}`)
+      if (error) {
+        console.error('[AIChatModal] Edge function error:', error)
+        throw new Error(error.message || 'Edge function failed')
       }
 
-      const data = await res.json()
-
-      if (data.error) {
+      if (data?.error) {
         console.error('[AIChatModal] API error:', data.error)
         throw new Error(data.error)
       }
