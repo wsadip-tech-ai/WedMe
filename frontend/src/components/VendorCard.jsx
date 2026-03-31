@@ -16,7 +16,7 @@ export function VendorCard({ vendor, shortlisted = false, onShortlistChange }) {
   }
   const photo = vendor.photo_urls?.[0] || PLACEHOLDER
   return (
-    <div style={{ background: 'var(--void-2)', border: '1px solid rgba(200,150,60,0.15)', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+    <Link to={`/vendors/${vendor.id}`} style={{ background: 'var(--void-2)', border: '1px solid rgba(200,150,60,0.15)', borderRadius: '12px', overflow: 'hidden', display: 'flex', flexDirection: 'column', textDecoration: 'none', transition: 'border-color 160ms, transform 160ms' }} onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(200,150,60,0.4)'; e.currentTarget.style.transform = 'translateY(-2px)' }} onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(200,150,60,0.15)'; e.currentTarget.style.transform = 'translateY(0)' }}>
       <div style={{ position: 'relative', aspectRatio: '4/3', overflow: 'hidden' }}>
         <img src={photo} alt={`${vendor.name} photo`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} loading="lazy" />
         <button onClick={toggleShortlist} aria-label={shortlisted ? 'Remove from shortlist' : 'Add to shortlist'} style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', background: 'rgba(11,9,6,0.75)', backdropFilter: 'blur(6px)', border: '1px solid rgba(200,150,60,0.3)', borderRadius: '50%', width: '44px', height: '44px', cursor: 'pointer', color: shortlisted ? 'var(--gold)' : 'var(--cream-muted)', fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{shortlisted ? '♥' : '♡'}</button>
@@ -28,14 +28,14 @@ export function VendorCard({ vendor, shortlisted = false, onShortlistChange }) {
         </div>
         <p style={{ color: 'var(--cream-muted)', fontSize: '0.82rem' }}>📍 {vendor.city}</p>
         {vendor.status === 'unverified' && (
-          <span style={{ fontSize: '0.68rem', color: '#fbbc05', background: 'rgba(251,188,5,0.12)', padding: '0.12rem 0.45rem', borderRadius: '99px' }}>Unverified</span>
+          <span style={{ fontSize: '0.68rem', color: '#fbbc05', background: 'rgba(251,188,5,0.12)', padding: '0.12rem 0.45rem', borderRadius: '99px', alignSelf: 'flex-start' }}>Unverified</span>
         )}
         {vendor.status === 'verified' && (
-          <span style={{ fontSize: '0.68rem', color: '#4caf7d', background: 'rgba(76,175,125,0.12)', padding: '0.12rem 0.45rem', borderRadius: '99px' }}>✓ Verified</span>
+          <span style={{ fontSize: '0.68rem', color: '#4caf7d', background: 'rgba(76,175,125,0.12)', padding: '0.12rem 0.45rem', borderRadius: '99px', alignSelf: 'flex-start' }}>✓ Verified</span>
         )}
         {vendor.price_range && <p style={{ color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 500 }}>{vendor.price_range}</p>}
-        <Link to={`/vendors/${vendor.id}`} style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'block', textAlign: 'center', padding: '0.55rem', background: 'var(--gold-muted)', border: '1px solid rgba(200,150,60,0.3)', borderRadius: '7px', color: 'var(--gold)', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none' }}>View Profile →</Link>
+        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', textAlign: 'center', padding: '0.55rem', background: 'var(--gold-muted)', border: '1px solid rgba(200,150,60,0.3)', borderRadius: '7px', color: 'var(--gold)', fontSize: '0.85rem', fontWeight: 600 }}>View Profile →</div>
       </div>
-    </div>
+    </Link>
   )
 }
