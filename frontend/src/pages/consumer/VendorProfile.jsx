@@ -42,9 +42,13 @@ function AvailCalendar({ availability, onSelectDate }) {
 
   function selectDay(day) {
     const key = keyOf(day)
-    setSelected(key)
-    onSelectDate(new Date(y, m, day))
+    setSelected(prev => prev === key ? null : key)
   }
+
+  const HOURS = [8,9,10,11,12,13,14,15,16,17,18,19,20,21]
+  function hourLabel(h) { return h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM` }
+  const selectedSlots = selected ? (availability[selected] || {}) : {}
+  const selectedAvailCount = Object.values(selectedSlots).filter(s => s === 'available').length
 
   const availableDays = cells.filter(d => {
     if (!d || isPast(d)) return false
@@ -173,10 +177,50 @@ function AvailCalendar({ availability, onSelectDate }) {
         ))}
       </div>
 
+      {/* Hourly availability preview when a date is selected */}
+      {selected && selectedAvailCount > 0 && (
+        <div style={{ marginTop: '1.25rem', padding: '1rem 1.15rem', background: 'rgba(200,150,60,0.04)', borderRadius: '10px', border: '1px solid rgba(200,150,60,0.12)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+            <div>
+              <p style={{ fontSize: '0.68rem', letterSpacing: '0.18em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Available Hours</p>
+              <p style={{ color: 'var(--cream)', fontSize: '0.88rem' }}>
+                {new Date(selected + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+              </p>
+            </div>
+            <button
+              onClick={() => onSelectDate(new Date(selected + 'T00:00:00'))}
+              style={{ padding: '0.5rem 1.1rem', background: 'var(--gold)', border: 'none', borderRadius: '8px', color: 'var(--void)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}
+            >
+              Book This Date
+            </button>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+            {HOURS.map(h => {
+              const status = selectedSlots[h]
+              const isAvail = status === 'available'
+              const isBlocked = status === 'blocked'
+              return (
+                <div key={h} style={{
+                  padding: '0.4rem 0.2rem', textAlign: 'center', borderRadius: '6px', fontSize: '0.68rem', fontWeight: isAvail ? 600 : 400,
+                  background: isAvail ? 'rgba(200,150,60,0.18)' : isBlocked ? 'rgba(140,30,30,0.12)' : 'rgba(255,255,255,0.03)',
+                  color: isAvail ? 'var(--gold)' : isBlocked ? 'rgba(200,70,70,0.6)' : 'rgba(245,239,230,0.3)',
+                  border: `1px solid ${isAvail ? 'rgba(200,150,60,0.25)' : isBlocked ? 'rgba(200,70,70,0.15)' : 'rgba(200,150,60,0.06)'}`,
+                }}>
+                  {hourLabel(h)}
+                </div>
+              )
+            })}
+          </div>
+          <p style={{ marginTop: '0.6rem', fontSize: '0.73rem', color: 'var(--cream-muted)', textAlign: 'center' }}>
+            {selectedAvailCount} of 14 hours available — select "Book This Date" to choose your time
+          </p>
+        </div>
+      )}
+
       {/* Available count for this month */}
-      {availableDays > 0 && (
+      {availableDays > 0 && !selected && (
         <p style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: 'var(--gold)', textAlign: 'center' }}>
-          {availableDays} date{availableDays !== 1 ? 's' : ''} available this month — click one to book
+          {availableDays} date{availableDays !== 1 ? 's' : ''} available this month — click one to see hours
         </p>
       )}
     </div>
