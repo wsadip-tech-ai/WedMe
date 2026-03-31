@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
-import { ADMIN_EMAIL } from '../lib/constants'
+import { ADMIN_EMAILS } from '../lib/constants'
 
 // ── Hamburger / Close SVGs ─────────────────────────────────────────────────────
 function HamburgerIcon({ open }) {
@@ -53,7 +53,7 @@ export function Nav() {
     navigate('/')
   }
 
-  const isAdmin = user?.email === ADMIN_EMAIL
+  const isAdmin = ADMIN_EMAILS.includes(user?.email)
 
   // Build nav links per role
   const links = !user ? [
