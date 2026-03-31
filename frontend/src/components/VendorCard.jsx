@@ -36,7 +36,7 @@ export function VendorCard({ vendor, shortlisted = false, onShortlistChange }) {
         {vendor.status === 'verified' && (
           <span style={{ fontSize: '0.68rem', color: '#4caf7d', background: 'rgba(76,175,125,0.12)', padding: '0.12rem 0.45rem', borderRadius: '99px', alignSelf: 'flex-start' }}>✓ Verified</span>
         )}
-        {vendor.price_range && <p style={{ color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 500 }}>{vendor.price_range}</p>}
+        {vendor.price_range && <p style={{ color: 'var(--gold)', fontSize: '0.82rem', fontWeight: 500 }}>{vendor.category === 'catering' ? `From ${vendor.price_range}` : vendor.price_range}</p>}
 
         {/* Action buttons row */}
         <div style={{ marginTop: 'auto', paddingTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>

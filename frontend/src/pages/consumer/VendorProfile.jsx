@@ -697,7 +697,7 @@ export default function VendorProfile() {
             <h2 style={sectionTitle}>About</h2>
             {vendor.price_range && (
               <p style={{ color: 'var(--gold)', fontSize: '1.05rem', fontWeight: 500, marginBottom: vendor.bio ? '0.75rem' : 0 }}>
-                {vendor.price_range}
+                {vendor.category === 'catering' ? `Starting from ${vendor.price_range}` : vendor.price_range}
               </p>
             )}
             {vendor.bio && <p style={{ color: 'var(--cream-muted)', lineHeight: 1.75 }}>{vendor.bio}</p>}
@@ -765,7 +765,8 @@ export default function VendorProfile() {
                     </span>
                   )}
                   <h3 style={{ fontFamily: 'var(--font-display)', fontSize: '1.3rem', color: 'var(--cream)', marginBottom: '0.4rem' }}>{pkg.name}</h3>
-                  {pkg.price_label && <p style={{ color: 'var(--gold)', fontSize: '1.05rem', fontWeight: 600, marginBottom: '0.5rem' }}>{pkg.price_label}</p>}
+                  {pkg.price_per_plate && <p style={{ color: 'var(--gold)', fontSize: '1.05rem', fontWeight: 600, marginBottom: '0.25rem' }}>{pkg.price_per_plate}</p>}
+                  {pkg.price_label && <p style={{ color: pkg.price_per_plate ? 'var(--cream-muted)' : 'var(--gold)', fontSize: pkg.price_per_plate ? '0.85rem' : '1.05rem', fontWeight: pkg.price_per_plate ? 400 : 600, marginBottom: '0.5rem' }}>{pkg.price_per_plate ? `Total: ${pkg.price_label}` : pkg.price_label}</p>}
                   {pkg.duration && <p style={{ color: 'var(--cream-muted)', fontSize: '0.78rem', marginBottom: '0.6rem' }}>⏱ {pkg.duration}</p>}
                   {pkg.description && <p style={{ color: 'var(--cream-muted)', fontSize: '0.85rem', lineHeight: 1.65 }}>{pkg.description}</p>}
                 </div>
