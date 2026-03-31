@@ -28,13 +28,17 @@ export default function AIChatModal({ vendor, onClose }) {
       if (!user) { setLoadingHistory(false); return }
 
       // Find most recent session for this vendor+customer
-      const { data: sessions } = await supabase
+      const { data: sessions, error: sessError } = await supabase
         .from('chat_sessions')
         .select('id, needs_vendor')
         .eq('vendor_id', vendor.id)
         .eq('customer_id', user.id)
         .order('created_at', { ascending: false })
         .limit(1)
+
+      if (sessError) {
+        console.error('[AIChatModal] Failed to load session:', sessError)
+      }
 
       if (sessions && sessions.length > 0) {
         const session = sessions[0]
