@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore'
+import { supabase } from '../lib/supabase'
 import { ADMIN_EMAIL } from '../lib/constants'
 
 // ── Hamburger / Close SVGs ─────────────────────────────────────────────────────
@@ -31,6 +32,17 @@ export function Nav() {
   const navigate  = useNavigate()
   const location  = useLocation()
   const [open, setOpen] = useState(false)
+  const [pendingChats, setPendingChats] = useState(0)
+
+  // Fetch pending chat count for vendors
+  useEffect(() => {
+    if (!user || role !== 'vendor') { setPendingChats(0); return }
+    supabase.from('vendor_listings').select('id').eq('owner_id', user.id).maybeSingle().then(({ data }) => {
+      if (!data) return
+      supabase.from('chat_sessions').select('*', { count: 'exact', head: true }).eq('vendor_id', data.id).eq('needs_vendor', true)
+        .then(({ count }) => setPendingChats(count || 0))
+    })
+  }, [user, role, location.pathname]) // refetch on route change
 
   // Close drawer on route change
   useEffect(() => { setOpen(false) }, [location.pathname])
@@ -67,7 +79,7 @@ export function Nav() {
   ] : [
     { to: '/vendor/dashboard',    label: 'Dashboard' },
     { to: '/vendor/bookings',     label: 'Bookings' },
-    { to: '/vendor/portfolio',    label: 'Portfolio' },
+    { to: '/vendor/chats',        label: 'Chats', badge: pendingChats },
     { to: '/vendor/profile/edit', label: 'My Profile' },
   ]
 
@@ -133,8 +145,8 @@ export function Nav() {
           className="nav-desktop-links"
           style={{ alignItems: 'center', gap: '1.5rem', listStyle: 'none', margin: 0, padding: 0 }}
         >
-          {links.map(({ to, label }) => (
-            <li key={to}>
+          {links.map(({ to, label, badge }) => (
+            <li key={to} style={{ position: 'relative' }}>
               <Link
                 to={to}
                 className="nav-link-item"
@@ -147,6 +159,7 @@ export function Nav() {
                 }}
               >
                 {label}
+                {badge > 0 && <span style={{ marginLeft: '0.35rem', background: '#fbbc05', color: 'var(--void)', fontSize: '0.6rem', fontWeight: 700, padding: '0.1rem 0.35rem', borderRadius: '99px', verticalAlign: 'top' }}>{badge}</span>}
               </Link>
             </li>
           ))}
@@ -302,7 +315,7 @@ export function Nav() {
         {/* Drawer nav links */}
         <nav aria-label="Mobile navigation">
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-            {links.map(({ to, label }) => (
+            {links.map(({ to, label, badge }) => (
               <li key={to}>
                 <Link
                   to={to}
@@ -320,6 +333,7 @@ export function Nav() {
                   }}
                 >
                   {label}
+                  {badge > 0 && <span style={{ marginLeft: '0.5rem', background: '#fbbc05', color: 'var(--void)', fontSize: '0.75rem', fontWeight: 700, padding: '0.1rem 0.45rem', borderRadius: '99px', verticalAlign: 'middle' }}>{badge}</span>}
                 </Link>
               </li>
             ))}

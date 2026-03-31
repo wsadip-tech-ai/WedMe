@@ -21,19 +21,22 @@ export default function VendorDashboard() {
   const [shortlistCount, setShortlistCount] = useState(0)
   const [pendingBookings, setPendingBookings] = useState(0)
   const [recentBookings, setRecentBookings] = useState([])
+  const [pendingChats, setPendingChats] = useState(0)
   useEffect(() => {
     if (!user) return
     supabase.from('vendor_listings').select('*').eq('owner_id', user.id).maybeSingle().then(async ({ data }) => {
       setListing(data)
       if (data) {
-        const [{ data: recent }, { count: sCount }, { count: bCount }, { data: recentB }] = await Promise.all([
+        const [{ data: recent }, { count: sCount }, { count: bCount }, { data: recentB }, { count: chatCount }] = await Promise.all([
           supabase.from('enquiries').select('*, profiles(full_name)').eq('vendor_id', data.id).order('created_at', { ascending: false }).limit(3),
           supabase.from('shortlists').select('*', { count: 'exact', head: true }).eq('vendor_id', data.id),
           supabase.from('bookings').select('*', { count: 'exact', head: true }).eq('vendor_id', data.id).eq('status', 'pending'),
           supabase.from('bookings').select('*, profiles(full_name), packages(name, price_label)').eq('vendor_id', data.id).eq('status', 'pending').order('created_at', { ascending: false }).limit(3),
+          supabase.from('chat_sessions').select('*', { count: 'exact', head: true }).eq('vendor_id', data.id).eq('needs_vendor', true),
         ])
         setEnquiries(recent || []); setShortlistCount(sCount || 0)
         setPendingBookings(bCount || 0); setRecentBookings(recentB || [])
+        setPendingChats(chatCount || 0)
       }
       setLoading(false)
     })
@@ -68,7 +71,10 @@ export default function VendorDashboard() {
         <Link to="/vendor/availability" className="quick-link" style={quickLink(false)}>Availability</Link>
         <Link to="/vendor/profile/edit" className="quick-link" style={quickLink(false)}>Edit Profile</Link>
         <Link to="/vendor/enquiries"    className="quick-link" style={quickLink(false)}>Enquiries</Link>
-        <Link to="/vendor/chats" className="quick-link" style={quickLink(false)}>AI Chats</Link>
+        <Link to="/vendor/chats" className="quick-link" style={{ ...quickLink(false), position: 'relative' }}>
+          AI Chats
+          {pendingChats > 0 && <span style={{ position: 'absolute', top: '-4px', right: '-4px', background: '#fbbc05', color: 'var(--void)', fontSize: '0.65rem', fontWeight: 700, width: '20px', height: '20px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{pendingChats}</span>}
+        </Link>
       </div>
       {recentBookings.length > 0 && (<div style={{ ...card, marginBottom: '1.5rem' }}><h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', marginBottom: '1rem' }}>Pending Booking Requests</h2>{recentBookings.map((b) => (<div key={b.id} style={{ padding: '0.85rem 0', borderBottom: '1px solid rgba(200,150,60,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}><div><p style={{ color: 'var(--cream)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>{b.profiles?.full_name || 'Customer'}</p><p style={{ color: 'var(--cream-muted)', fontSize: '0.82rem' }}>
   {b.booking_date
