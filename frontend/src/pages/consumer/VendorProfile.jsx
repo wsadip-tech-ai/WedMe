@@ -653,6 +653,8 @@ export default function VendorProfile() {
             <span style={pill}>{vendor.category}</span>
             <span style={pillMuted}>{TIER_LABEL[vendor.tier] || vendor.tier}</span>
             <span style={pillMuted}>📍 {vendor.city}</span>
+            {vendor.status === 'verified' && <span style={{ ...pill, background: 'rgba(76,175,125,0.15)', color: '#4caf7d', borderColor: 'rgba(76,175,125,0.3)' }}>✓ Verified</span>}
+            {vendor.status === 'unverified' && <span style={{ ...pill, background: 'rgba(251,188,5,0.12)', color: '#fbbc05', borderColor: 'rgba(251,188,5,0.25)' }}>Unverified</span>}
           </div>
           <h1 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2rem,5vw,3.2rem)', fontWeight: 400, color: 'var(--cream)', lineHeight: 1.1, marginBottom: '0.75rem' }}>
             {vendor.name}
