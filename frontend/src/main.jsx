@@ -30,6 +30,8 @@ import PortfolioManager from './pages/vendor/PortfolioManager'
 import PackageManager from './pages/vendor/PackageManager'
 import AvailabilityManager from './pages/vendor/AvailabilityManager'
 import BookingRequests from './pages/vendor/BookingRequests'
+import VendorChats from './pages/vendor/VendorChats'
+import VendorChatDetail from './pages/vendor/VendorChatDetail'
 import MyBookings from './pages/consumer/MyBookings'
 import AuthCallback from './pages/auth/AuthCallback'
 import NotFound from './pages/NotFound'
@@ -172,6 +174,14 @@ const router = createBrowserRouter([
       {
         path: '/vendor/bookings',
         element: <AuthGuard role="vendor"><BookingRequests /></AuthGuard>,
+      },
+      {
+        path: '/vendor/chats',
+        element: <AuthGuard role="vendor"><VendorChats /></AuthGuard>,
+      },
+      {
+        path: '/vendor/chats/:sessionId',
+        element: <AuthGuard role="vendor"><VendorChatDetail /></AuthGuard>,
       },
       { path: '*', element: <NotFound /> },
     ],
