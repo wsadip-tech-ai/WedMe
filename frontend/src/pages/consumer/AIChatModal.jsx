@@ -82,23 +82,7 @@ export default function AIChatModal({ vendor, onClose }) {
     setSending(true)
 
     try {
-      // If escalated (vendor is in the conversation), send directly to DB instead of AI
-      if (escalated && sessionId) {
-        const { error: insertErr } = await supabase.from('chat_messages').insert({
-          session_id: sessionId,
-          role: 'customer',
-          content: messageText.trim(),
-        })
-        if (insertErr) throw new Error('Failed to send message')
-
-        // Re-flag session so vendor gets notified
-        await supabase.from('chat_sessions').update({ needs_vendor: true }).eq('id', sessionId)
-        setNeedsVendor(true)
-        setSending(false)
-        return
-      }
-
-      // Otherwise, send through AI edge function
+      // Always send through AI edge function
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) throw new Error('Not signed in')
 
@@ -158,11 +142,9 @@ export default function AIChatModal({ vendor, onClose }) {
   }
 
   async function handleEscalate() {
-    if (!sessionId || escalated) return
+    if (!sessionId) return
     try {
-      // Flag the session for vendor attention
       await supabase.from('chat_sessions').update({ needs_vendor: true }).eq('id', sessionId)
-      // Add a system-style message so vendor sees context
       await supabase.from('chat_messages').insert({
         session_id: sessionId,
         role: 'customer',
@@ -174,6 +156,28 @@ export default function AIChatModal({ vendor, onClose }) {
       showToast('Vendor has been notified!')
     } catch {
       showToast('Failed to notify vendor', 'error')
+    }
+  }
+
+  async function sendToVendor() {
+    if (!input.trim() || !sessionId || sending) return
+    const messageText = input.trim()
+    setMessages(prev => [...prev, { role: 'customer', content: messageText }])
+    setInput('')
+    setSending(true)
+    try {
+      await supabase.from('chat_messages').insert({
+        session_id: sessionId,
+        role: 'customer',
+        content: messageText,
+      })
+      await supabase.from('chat_sessions').update({ needs_vendor: true }).eq('id', sessionId)
+      setNeedsVendor(true)
+      setEscalated(true)
+    } catch {
+      showToast('Failed to send to vendor', 'error')
+    } finally {
+      setSending(false)
     }
   }
 
@@ -449,9 +453,11 @@ export default function AIChatModal({ vendor, onClose }) {
                 opacity: sending ? 0.6 : 1,
               }}
             />
+            {/* AI Send button (always available) */}
             <button
               onClick={() => sendMessage()}
               disabled={!canSend}
+              title="Ask AI"
               style={{
                 padding: '0.6rem 1rem',
                 background: 'var(--gold)',
@@ -466,36 +472,42 @@ export default function AIChatModal({ vendor, onClose }) {
                 flexShrink: 0,
               }}
             >
-              Send
+              🤖 AI
             </button>
+
+            {/* Send to Vendor button (shown after first AI interaction) */}
+            {sessionId && (
+              <button
+                onClick={sendToVendor}
+                disabled={!canSend}
+                title="Send to vendor directly"
+                style={{
+                  padding: '0.6rem 1rem',
+                  background: escalated ? 'rgba(76,175,125,0.15)' : 'transparent',
+                  border: `1px solid ${escalated ? 'rgba(76,175,125,0.3)' : 'rgba(200,150,60,0.25)'}`,
+                  borderRadius: 8,
+                  color: escalated ? '#4caf7d' : 'var(--cream-muted)',
+                  fontFamily: 'var(--font-body)',
+                  fontWeight: 600,
+                  fontSize: '0.85rem',
+                  cursor: canSend ? 'pointer' : 'not-allowed',
+                  opacity: canSend ? 1 : 0.5,
+                  flexShrink: 0,
+                }}
+              >
+                💼 Vendor
+              </button>
+            )}
           </div>
 
           {/* Status indicator */}
-          {escalated ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: messages.some(m => m.role === 'vendor') ? 'rgba(76,175,125,0.06)' : 'rgba(251,188,5,0.08)', borderRadius: '8px', border: `1px solid ${messages.some(m => m.role === 'vendor') ? 'rgba(76,175,125,0.15)' : 'rgba(251,188,5,0.15)'}` }}>
-              <span style={{ color: messages.some(m => m.role === 'vendor') ? '#4caf7d' : '#fbbc05', fontSize: '0.78rem' }}>
-                {messages.some(m => m.role === 'vendor')
-                  ? '💬 Chatting with vendor — type below to continue'
-                  : '⏳ Waiting for vendor reply…'}
-              </span>
+          {needsVendor && !messages.some(m => m.role === 'vendor') ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.35rem 0.8rem', background: 'rgba(251,188,5,0.06)', borderRadius: '6px' }}>
+              <span style={{ color: '#fbbc05', fontSize: '0.72rem' }}>⏳ Waiting for vendor reply…</span>
             </div>
-          ) : sessionId ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-              <span style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
-                Need a human?{' '}
-              </span>
-              <span
-                onClick={handleEscalate}
-                style={{
-                  color: 'var(--gold)',
-                  fontSize: '0.8rem',
-                  cursor: 'pointer',
-                  textDecoration: 'underline',
-                  textUnderlineOffset: '2px',
-                }}
-              >
-                Ask vendor to reply →
-              </span>
+          ) : messages.some(m => m.role === 'vendor') ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.35rem 0.8rem', background: 'rgba(76,175,125,0.06)', borderRadius: '6px' }}>
+              <span style={{ color: '#4caf7d', fontSize: '0.72rem' }}>💬 Vendor is in the conversation</span>
             </div>
           ) : null}
         </div>
