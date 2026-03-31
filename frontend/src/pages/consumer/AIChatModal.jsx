@@ -8,25 +8,65 @@ const SUGGESTED_QUESTIONS = [
   'Are you available for my date?',
 ]
 
-export default function AIChatModal({ vendor, onClose, onEscalate }) {
+export default function AIChatModal({ vendor, onClose }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [sessionId, setSessionId] = useState(null)
   const [sending, setSending] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(true)
+  const [needsVendor, setNeedsVendor] = useState(false)
+  const [escalated, setEscalated] = useState(false)
 
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
   const { show: showToast } = useToastStore()
 
+  // On mount: check for existing session with this vendor and resume it
+  useEffect(() => {
+    async function loadExistingSession() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { setLoadingHistory(false); return }
+
+      // Find most recent session for this vendor+customer
+      const { data: sessions } = await supabase
+        .from('chat_sessions')
+        .select('id, needs_vendor')
+        .eq('vendor_id', vendor.id)
+        .eq('customer_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+
+      if (sessions && sessions.length > 0) {
+        const session = sessions[0]
+        setSessionId(session.id)
+        setNeedsVendor(session.needs_vendor)
+        if (session.needs_vendor) setEscalated(true)
+
+        // Load message history
+        const { data: msgs } = await supabase
+          .from('chat_messages')
+          .select('role, content')
+          .eq('session_id', session.id)
+          .order('created_at', { ascending: true })
+
+        if (msgs && msgs.length > 0) {
+          setMessages(msgs.map(m => ({ role: m.role, content: m.content })))
+        }
+      }
+      setLoadingHistory(false)
+    }
+    loadExistingSession()
+  }, [vendor.id])
+
   // Auto-scroll to bottom on new messages or sending state change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, sending])
+  }, [messages, sending, loadingHistory])
 
   // Focus input on mount
   useEffect(() => {
-    inputRef.current?.focus()
-  }, [])
+    if (!loadingHistory) inputRef.current?.focus()
+  }, [loadingHistory])
 
   async function sendMessage(text) {
     const messageText = text ?? input
@@ -98,8 +138,6 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
     sendMessage(q)
   }
 
-  const [escalated, setEscalated] = useState(false)
-
   async function handleEscalate() {
     if (!sessionId || escalated) return
     try {
@@ -113,6 +151,7 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
       })
       setMessages(prev => [...prev, { role: 'assistant', content: '✅ Your request has been sent to the vendor. They will reply here in this chat. You can check back anytime!' }])
       setEscalated(true)
+      setNeedsVendor(true)
       showToast('Vendor has been notified!')
     } catch {
       showToast('Failed to notify vendor', 'error')
@@ -206,8 +245,13 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
             padding: '1.25rem 1.5rem',
           }}
         >
+          {/* Loading history */}
+          {loadingHistory && (
+            <div style={{ textAlign: 'center', paddingTop: '2rem', color: 'var(--cream-muted)', fontSize: '0.85rem' }}>Loading conversation…</div>
+          )}
+
           {/* Welcome state */}
-          {messages.length === 0 && !sending && (
+          {!loadingHistory && messages.length === 0 && !sending && (
             <div style={{ textAlign: 'center', paddingTop: '1rem' }}>
               <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>🤖</div>
               <p
@@ -407,8 +451,16 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
             </button>
           </div>
 
-          {/* Escalation link */}
-          {sessionId && !escalated ? (
+          {/* Status indicator */}
+          {needsVendor && !messages.some(m => m.role === 'vendor') ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(251,188,5,0.08)', borderRadius: '8px', border: '1px solid rgba(251,188,5,0.15)' }}>
+              <span style={{ color: '#fbbc05', fontSize: '0.78rem' }}>⏳ Waiting for vendor reply…</span>
+            </div>
+          ) : messages.some(m => m.role === 'vendor') ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
+              <span style={{ color: '#4caf7d', fontSize: '0.78rem' }}>✓ Vendor has replied</span>
+            </div>
+          ) : sessionId && !escalated ? (
             <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
               <span style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
                 Need a human?{' '}
@@ -427,8 +479,8 @@ export default function AIChatModal({ vendor, onClose, onEscalate }) {
               </span>
             </div>
           ) : escalated ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-              <span style={{ color: '#4caf7d', fontSize: '0.78rem' }}>✓ Vendor notified — they'll reply here</span>
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(251,188,5,0.08)', borderRadius: '8px', border: '1px solid rgba(251,188,5,0.15)' }}>
+              <span style={{ color: '#fbbc05', fontSize: '0.78rem' }}>⏳ Vendor notified — waiting for reply…</span>
             </div>
           ) : null}
         </div>
