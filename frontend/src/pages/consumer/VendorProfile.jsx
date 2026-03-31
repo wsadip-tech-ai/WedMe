@@ -4,6 +4,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/useAuthStore'
 import { useToastStore } from '../../store/useToastStore'
 import { BUDGET_RANGES } from '../../lib/budgetRanges'
+import AIChatModal from './AIChatModal'
 
 const TIER_LABEL = { economy: 'Economy', mid: 'Mid-Range', premium: 'Premium' }
 const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December']
@@ -567,6 +568,7 @@ export default function VendorProfile() {
   const [bookingEnd,    setBookingEnd]    = useState(null) // pre-selected end hour
   const [lightbox,      setLightbox]      = useState(null) // { url, caption }
   const [showEnquiry,   setShowEnquiry]   = useState(false)
+  const [showAIChat,    setShowAIChat]    = useState(false)
   const [showBookNow,   setShowBookNow]   = useState(false)
 
   useEffect(() => {
@@ -678,10 +680,10 @@ export default function VendorProfile() {
               Book Now
             </button>
             <button
-              onClick={() => { if (!user) { show('Sign in to send an enquiry', 'error'); return } setShowEnquiry(true) }}
-              style={enquiryBtn}
+              onClick={() => { if (!user) { show('Sign in to chat', 'error'); return } setShowAIChat(true) }}
+              style={{ ...enquiryBtn, background: 'rgba(200,150,60,0.12)', borderColor: 'rgba(200,150,60,0.35)' }}
             >
-              Ask a Question
+              🤖 Ask AI
             </button>
           </div>
         </div>
@@ -857,6 +859,15 @@ export default function VendorProfile() {
           vendor={vendor}
           onClose={() => setShowEnquiry(false)}
           onSuccess={() => setShowEnquiry(false)}
+        />
+      )}
+
+      {/* ── AI Chat Modal ──────────────────────────────────────────── */}
+      {showAIChat && (
+        <AIChatModal
+          vendor={vendor}
+          onClose={() => setShowAIChat(false)}
+          onEscalate={() => { setShowAIChat(false); setShowEnquiry(true) }}
         />
       )}
     </main>
