@@ -68,6 +68,7 @@ export default function VendorDashboard() {
         <Link to="/vendor/availability" className="quick-link" style={quickLink(false)}>Availability</Link>
         <Link to="/vendor/profile/edit" className="quick-link" style={quickLink(false)}>Edit Profile</Link>
         <Link to="/vendor/enquiries"    className="quick-link" style={quickLink(false)}>Enquiries</Link>
+        <Link to="/vendor/chats" className="quick-link" style={quickLink(false)}>AI Chats</Link>
       </div>
       {recentBookings.length > 0 && (<div style={{ ...card, marginBottom: '1.5rem' }}><h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.2rem', color: 'var(--cream)', marginBottom: '1rem' }}>Pending Booking Requests</h2>{recentBookings.map((b) => (<div key={b.id} style={{ padding: '0.85rem 0', borderBottom: '1px solid rgba(200,150,60,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}><div><p style={{ color: 'var(--cream)', fontSize: '0.9rem', marginBottom: '0.2rem' }}>{b.profiles?.full_name || 'Customer'}</p><p style={{ color: 'var(--cream-muted)', fontSize: '0.82rem' }}>
   {b.booking_date

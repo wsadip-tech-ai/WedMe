@@ -8,7 +8,7 @@ import { BUDGET_RANGES } from '../../lib/budgetRanges'
 
 const CATEGORIES = ['photography', 'makeup', 'catering', 'decor', 'music', 'mehendi', 'pandit', 'venue']
 const TIERS = ['economy', 'mid', 'premium']
-const TABS = ['profile', 'bookings', 'enquiries', 'packages', 'documents']
+const TABS = ['profile', 'bookings', 'enquiries', 'packages', 'documents', 'chats']
 
 const STATUS_BADGE = {
   unverified: { background: 'rgba(251,188,5,0.15)', color: '#fbbc05' },
@@ -113,6 +113,11 @@ export default function AdminVendorDetail() {
   // Packages tab
   const [packages, setPackages] = useState(null)
 
+  // Chats tab
+  const [chatSessions, setChatSessions] = useState(null)
+  const [expandedChat, setExpandedChat] = useState(null)
+  const [chatMessages, setChatMessages] = useState({})
+
   // Documents tab
   const [pdfs, setPdfs] = useState(null)
   const [noteRow, setNoteRow] = useState(null)
@@ -160,6 +165,7 @@ export default function AdminVendorDetail() {
     if (activeTab === 'enquiries' && enquiries === null) fetchEnquiries()
     if (activeTab === 'packages' && packages === null) fetchPackages()
     if (activeTab === 'documents' && pdfs === null) fetchDocuments()
+    if (activeTab === 'chats' && chatSessions === null) fetchChatSessions()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
@@ -212,6 +218,26 @@ export default function AdminVendorDetail() {
       setNoteRow(null)
       setNoteText('')
     }
+  }
+
+  async function fetchChatSessions() {
+    const { data, error } = await supabase
+      .from('chat_sessions')
+      .select('*, profiles(full_name)')
+      .eq('vendor_id', id)
+      .order('created_at', { ascending: false })
+    if (error) addToast('Failed to load chats', 'error')
+    else setChatSessions(data || [])
+  }
+
+  async function fetchChatMessages(sessionId) {
+    if (chatMessages[sessionId]) return // already loaded
+    const { data } = await supabase
+      .from('chat_messages')
+      .select('*')
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
+    setChatMessages(prev => ({ ...prev, [sessionId]: data || [] }))
   }
 
   // ── Status actions ────────────────────────────────────────────────────────
@@ -904,6 +930,64 @@ export default function AdminVendorDetail() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Chats tab */}
+      {activeTab === 'chats' && (
+        <div style={card}>
+          <h2 style={sectionHeading}>AI Chat Sessions</h2>
+          {chatSessions === null ? (
+            <EmptyState message="Loading chats…" />
+          ) : chatSessions.length === 0 ? (
+            <EmptyState message="No AI chat sessions yet." />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {chatSessions.map(s => (
+                <div key={s.id} style={{ background: 'var(--void-3)', borderRadius: '10px', border: '1px solid rgba(200,150,60,0.08)', overflow: 'hidden' }}>
+                  <button
+                    onClick={() => {
+                      const next = expandedChat === s.id ? null : s.id
+                      setExpandedChat(next)
+                      if (next) fetchChatMessages(next)
+                    }}
+                    style={{ width: '100%', padding: '0.8rem 1rem', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'center', textAlign: 'left' }}
+                  >
+                    <div>
+                      <p style={{ color: 'var(--cream)', fontSize: '0.9rem', marginBottom: '0.15rem' }}>{s.profiles?.full_name || 'Customer'}</p>
+                      <p style={{ color: 'var(--cream-muted)', fontSize: '0.75rem' }}>{new Date(s.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                    </div>
+                    <span style={{ color: 'var(--cream-muted)' }}>{expandedChat === s.id ? '▲' : '▼'}</span>
+                  </button>
+                  {expandedChat === s.id && (
+                    <div style={{ padding: '0 1rem 1rem', borderTop: '1px solid rgba(200,150,60,0.06)' }}>
+                      {!chatMessages[s.id] ? (
+                        <p style={{ color: 'var(--cream-muted)', fontSize: '0.82rem', padding: '0.75rem 0' }}>Loading…</p>
+                      ) : chatMessages[s.id].length === 0 ? (
+                        <p style={{ color: 'var(--cream-muted)', fontSize: '0.82rem', padding: '0.75rem 0' }}>No messages.</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem' }}>
+                          {chatMessages[s.id].map(m => (
+                            <div key={m.id} style={{ display: 'flex', justifyContent: m.role === 'customer' ? 'flex-end' : 'flex-start' }}>
+                              <div style={{
+                                maxWidth: '80%', padding: '0.5rem 0.75rem',
+                                background: m.role === 'customer' ? 'rgba(200,150,60,0.15)' : 'rgba(255,255,255,0.03)',
+                                border: `1px solid ${m.role === 'customer' ? 'rgba(200,150,60,0.2)' : 'rgba(200,150,60,0.06)'}`,
+                                borderRadius: m.role === 'customer' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
+                              }}>
+                                {m.role === 'assistant' && <p style={{ fontSize: '0.6rem', color: 'var(--cream-muted)', marginBottom: '0.15rem' }}>🤖 AI</p>}
+                                <p style={{ color: 'var(--cream)', fontSize: '0.82rem', lineHeight: 1.5 }}>{m.content}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </main>
