@@ -82,12 +82,28 @@ export default function AIChatModal({ vendor, onClose }) {
     setSending(true)
 
     try {
+      // If escalated (vendor is in the conversation), send directly to DB instead of AI
+      if (escalated && sessionId) {
+        const { error: insertErr } = await supabase.from('chat_messages').insert({
+          session_id: sessionId,
+          role: 'customer',
+          content: messageText.trim(),
+        })
+        if (insertErr) throw new Error('Failed to send message')
+
+        // Re-flag session so vendor gets notified
+        await supabase.from('chat_sessions').update({ needs_vendor: true }).eq('id', sessionId)
+        setNeedsVendor(true)
+        setSending(false)
+        return
+      }
+
+      // Otherwise, send through AI edge function
       const { data: { session } } = await supabase.auth.getSession()
       if (!session?.access_token) throw new Error('Not signed in')
 
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
       const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
-      console.log('[AIChatModal] Sending to edge function, vendor:', vendor.id, 'anonKey starts with:', anonKey?.substring(0, 10))
 
       const res = await fetch(`${supabaseUrl}/functions/v1/chat`, {
         method: 'POST',
@@ -104,7 +120,6 @@ export default function AIChatModal({ vendor, onClose }) {
       })
 
       const responseText = await res.text()
-      console.log('[AIChatModal] Response status:', res.status, 'body:', responseText)
 
       if (!res.ok) {
         throw new Error(`Server error ${res.status}: ${responseText}`)
@@ -456,15 +471,15 @@ export default function AIChatModal({ vendor, onClose }) {
           </div>
 
           {/* Status indicator */}
-          {needsVendor && !messages.some(m => m.role === 'vendor') ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(251,188,5,0.08)', borderRadius: '8px', border: '1px solid rgba(251,188,5,0.15)' }}>
-              <span style={{ color: '#fbbc05', fontSize: '0.78rem' }}>⏳ Waiting for vendor reply…</span>
+          {escalated ? (
+            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: messages.some(m => m.role === 'vendor') ? 'rgba(76,175,125,0.06)' : 'rgba(251,188,5,0.08)', borderRadius: '8px', border: `1px solid ${messages.some(m => m.role === 'vendor') ? 'rgba(76,175,125,0.15)' : 'rgba(251,188,5,0.15)'}` }}>
+              <span style={{ color: messages.some(m => m.role === 'vendor') ? '#4caf7d' : '#fbbc05', fontSize: '0.78rem' }}>
+                {messages.some(m => m.role === 'vendor')
+                  ? '💬 Chatting with vendor — type below to continue'
+                  : '⏳ Waiting for vendor reply…'}
+              </span>
             </div>
-          ) : messages.some(m => m.role === 'vendor') ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-              <span style={{ color: '#4caf7d', fontSize: '0.78rem' }}>✓ Vendor has replied</span>
-            </div>
-          ) : sessionId && !escalated ? (
+          ) : sessionId ? (
             <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
               <span style={{ color: 'var(--cream-muted)', fontSize: '0.8rem' }}>
                 Need a human?{' '}
@@ -481,10 +496,6 @@ export default function AIChatModal({ vendor, onClose }) {
               >
                 Ask vendor to reply →
               </span>
-            </div>
-          ) : escalated ? (
-            <div style={{ textAlign: 'center', marginTop: '0.5rem', padding: '0.4rem 0.8rem', background: 'rgba(251,188,5,0.08)', borderRadius: '8px', border: '1px solid rgba(251,188,5,0.15)' }}>
-              <span style={{ color: '#fbbc05', fontSize: '0.78rem' }}>⏳ Vendor notified — waiting for reply…</span>
             </div>
           ) : null}
         </div>
