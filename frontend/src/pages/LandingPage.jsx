@@ -19,9 +19,9 @@ const CATEGORIES = [
 ]
 
 const STEPS = [
-  { num: '01', title: 'Discover', desc: 'Browse hundreds of vetted wedding & event vendors across Nepal.' },
-  { num: '02', title: 'Shortlist', desc: 'Save your favourites and compare them at your own pace.' },
-  { num: '03', title: 'Connect',  desc: 'Send an enquiry directly — no middlemen, no commission.' },
+  { num: '01', title: 'Discover', desc: 'Browse vetted wedding & event vendors across Nepal. Filter by category and city.' },
+  { num: '02', title: 'Compare',  desc: 'View portfolios, service packages, and real availability — all in one place.' },
+  { num: '03', title: 'Book',     desc: 'Pick a date, choose a package, and confirm directly — no middlemen, no commission.' },
 ]
 
 export default function LandingPage() {
@@ -33,7 +33,7 @@ export default function LandingPage() {
     let cancelled = false
     async function fetchVendors() {
       setLoading(true)
-      let q = supabase.from('vendor_listings').select('*')
+      let q = supabase.from('vendor_listings').select('*').neq('status', 'suspended')
       if (activeCategory !== 'all') q = q.eq('category', activeCategory)
       q = q.order('created_at', { ascending: false }).limit(activeCategory === 'all' ? 6 : 3)
       const { data } = await q
@@ -125,7 +125,7 @@ export default function LandingPage() {
             maxWidth: '480px', margin: '0 auto 2.5rem', lineHeight: 1.75,
           }}>
             Discover and connect with the finest photographers, venues, makeup artists,
-            and more — all in Kathmandu.
+            and more — wherever your celebration takes place.
           </p>
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', justifyContent: 'center' }}>
             <Link to="/vendors" style={{
@@ -154,7 +154,7 @@ export default function LandingPage() {
           fontSize: '0.72rem', letterSpacing: '0.24em', color: 'var(--gold)',
           textTransform: 'uppercase', textAlign: 'center', marginBottom: '0.6rem',
         }}>
-          Kathmandu&apos;s Best
+          Featured Vendors
         </p>
         <h2 style={{
           fontFamily: 'var(--font-display)',
