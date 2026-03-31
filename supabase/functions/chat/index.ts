@@ -21,10 +21,10 @@ Deno.serve(async (req) => {
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-    const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
+    const openaiKey = Deno.env.get('OPENAI_API_KEY')
 
-    if (!anthropicKey) {
-      return new Response(JSON.stringify({ error: 'Anthropic API key not configured' }), {
+    if (!openaiKey) {
+      return new Response(JSON.stringify({ error: 'OpenAI API key not configured' }), {
         status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -131,31 +131,35 @@ RULES:
     }))
     messages.push({ role: 'user', content: message })
 
-    const anthropicResponse = await fetch('https://api.anthropic.com/v1/messages', {
+    // OpenAI API call (GPT-4o-mini)
+    const openaiMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages,
+    ]
+
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
+        'Authorization': `Bearer ${openaiKey}`,
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'gpt-4o-mini',
         max_tokens: 512,
-        system: systemPrompt,
-        messages,
+        messages: openaiMessages,
       }),
     })
 
-    if (!anthropicResponse.ok) {
-      const errBody = await anthropicResponse.text()
-      console.error('Anthropic API error:', errBody)
+    if (!openaiResponse.ok) {
+      const errBody = await openaiResponse.text()
+      console.error('OpenAI API error:', errBody)
       return new Response(JSON.stringify({ error: 'AI service temporarily unavailable' }), {
         status: 502, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const aiResult = await anthropicResponse.json()
-    const aiResponse = aiResult.content?.[0]?.text || 'Sorry, I could not generate a response.'
+    const aiResult = await openaiResponse.json()
+    const aiResponse = aiResult.choices?.[0]?.message?.content || 'Sorry, I could not generate a response.'
 
     await supabaseAdmin.from('chat_messages').insert([
       { session_id: currentSessionId, role: 'customer', content: message },
