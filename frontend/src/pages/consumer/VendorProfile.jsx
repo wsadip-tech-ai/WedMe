@@ -23,9 +23,11 @@ const ChevronRight = () => (
 )
 
 // ── Availability calendar (customer read-only) ─────────────────────────────────
-function AvailCalendar({ availability, onSelectDate }) {
+function AvailCalendar({ availability, onSelectDate, onSelectTimeRange }) {
   const [view, setView]     = useState(() => { const d = new Date(); return { y: d.getFullYear(), m: d.getMonth() } })
   const [selected, setSelected] = useState(null) // 'YYYY-MM-DD'
+  const [rangeStart, setRangeStart] = useState(null) // hour int (8-21)
+  const [rangeEnd, setRangeEnd]     = useState(null) // hour int (9-22)
 
   const { y, m } = view
   const today    = new Date(); today.setHours(0,0,0,0)
@@ -43,6 +45,33 @@ function AvailCalendar({ availability, onSelectDate }) {
   function selectDay(day) {
     const key = keyOf(day)
     setSelected(prev => prev === key ? null : key)
+    setRangeStart(null)
+    setRangeEnd(null)
+  }
+
+  function clickHour(h) {
+    const status = selectedSlots[h]
+    if (status !== 'available') return
+
+    if (rangeStart === null) {
+      // First click — set start
+      setRangeStart(h)
+      setRangeEnd(h + 1)
+    } else if (rangeEnd !== null && h >= rangeStart) {
+      // Second click — extend to this hour (end = h+1 since it's end-exclusive)
+      // Validate all hours in range are available
+      let valid = true
+      for (let hr = rangeStart; hr <= h; hr++) {
+        if (selectedSlots[hr] !== 'available') { valid = false; break }
+      }
+      if (valid) {
+        setRangeEnd(h + 1)
+      }
+    } else {
+      // Click before start — reset
+      setRangeStart(h)
+      setRangeEnd(h + 1)
+    }
   }
 
   const HOURS = [8,9,10,11,12,13,14,15,16,17,18,19,20,21]
@@ -177,43 +206,87 @@ function AvailCalendar({ availability, onSelectDate }) {
         ))}
       </div>
 
-      {/* Hourly availability preview when a date is selected */}
+      {/* Hourly availability preview — interactive time selection */}
       {selected && selectedAvailCount > 0 && (
         <div style={{ marginTop: '1.25rem', padding: '1rem 1.15rem', background: 'rgba(200,150,60,0.04)', borderRadius: '10px', border: '1px solid rgba(200,150,60,0.12)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <p style={{ fontSize: '0.68rem', letterSpacing: '0.18em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Available Hours</p>
+              <p style={{ fontSize: '0.68rem', letterSpacing: '0.18em', color: 'var(--gold)', textTransform: 'uppercase', marginBottom: '0.15rem' }}>Select Your Hours</p>
               <p style={{ color: 'var(--cream)', fontSize: '0.88rem' }}>
                 {new Date(selected + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
               </p>
             </div>
-            <button
-              onClick={() => onSelectDate(new Date(selected + 'T00:00:00'))}
-              style={{ padding: '0.5rem 1.1rem', background: 'var(--gold)', border: 'none', borderRadius: '8px', color: 'var(--void)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}
-            >
-              Book This Date
-            </button>
+            {rangeStart !== null && rangeEnd !== null && (
+              <button
+                onClick={() => onSelectTimeRange(new Date(selected + 'T00:00:00'), rangeStart, rangeEnd)}
+                style={{ padding: '0.5rem 1.1rem', background: 'var(--gold)', border: 'none', borderRadius: '8px', color: 'var(--void)', fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                Book {hourLabel(rangeStart)} – {hourLabel(rangeEnd)}
+              </button>
+            )}
           </div>
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
             {HOURS.map(h => {
               const status = selectedSlots[h]
               const isAvail = status === 'available'
               const isBlocked = status === 'blocked'
+              const inRange = rangeStart !== null && rangeEnd !== null && h >= rangeStart && h < rangeEnd
+              const isStart = h === rangeStart
+
+              const bg = inRange   ? 'rgba(200,150,60,0.4)'
+                       : isAvail   ? 'rgba(200,150,60,0.15)'
+                       : isBlocked ? 'rgba(140,30,30,0.12)'
+                       : 'rgba(255,255,255,0.03)'
+              const col = inRange   ? 'var(--cream)'
+                        : isAvail   ? 'var(--gold)'
+                        : isBlocked ? 'rgba(200,70,70,0.5)'
+                        : 'rgba(245,239,230,0.25)'
+              const bdr = inRange   ? 'var(--gold)'
+                        : isAvail   ? 'rgba(200,150,60,0.25)'
+                        : isBlocked ? 'rgba(200,70,70,0.15)'
+                        : 'rgba(200,150,60,0.06)'
+
               return (
-                <div key={h} style={{
-                  padding: '0.4rem 0.2rem', textAlign: 'center', borderRadius: '6px', fontSize: '0.68rem', fontWeight: isAvail ? 600 : 400,
-                  background: isAvail ? 'rgba(200,150,60,0.18)' : isBlocked ? 'rgba(140,30,30,0.12)' : 'rgba(255,255,255,0.03)',
-                  color: isAvail ? 'var(--gold)' : isBlocked ? 'rgba(200,70,70,0.6)' : 'rgba(245,239,230,0.3)',
-                  border: `1px solid ${isAvail ? 'rgba(200,150,60,0.25)' : isBlocked ? 'rgba(200,70,70,0.15)' : 'rgba(200,150,60,0.06)'}`,
-                }}>
+                <button key={h}
+                  onClick={() => clickHour(h)}
+                  disabled={!isAvail}
+                  title={isAvail ? (rangeStart === null ? 'Click to set start time' : `Click to set end time (${hourLabel(h+1)})`) : isBlocked ? 'Unavailable' : ''}
+                  style={{
+                    padding: '0.45rem 0.2rem', textAlign: 'center', borderRadius: '6px',
+                    fontSize: '0.68rem', fontWeight: inRange ? 700 : isAvail ? 500 : 400,
+                    background: bg, color: col,
+                    border: `1.5px solid ${bdr}`,
+                    cursor: isAvail ? 'pointer' : 'default',
+                    transition: 'background 130ms, border-color 130ms',
+                    outline: 'none',
+                  }}
+                >
                   {hourLabel(h)}
-                </div>
+                </button>
               )
             })}
           </div>
+
+          {/* Selection hint */}
           <p style={{ marginTop: '0.6rem', fontSize: '0.73rem', color: 'var(--cream-muted)', textAlign: 'center' }}>
-            {selectedAvailCount} of 14 hours available — select "Book This Date" to choose your time
+            {rangeStart === null
+              ? `${selectedAvailCount} hours available — tap an available slot to start`
+              : rangeEnd && rangeEnd - rangeStart >= 1
+                ? `Selected: ${hourLabel(rangeStart)} – ${hourLabel(rangeEnd)} (${rangeEnd - rangeStart} hr${rangeEnd - rangeStart > 1 ? 's' : ''}) — tap another slot to adjust, or click Book`
+                : 'Now tap another slot to set end time'
+            }
           </p>
+
+          {/* Reset link */}
+          {rangeStart !== null && (
+            <p style={{ textAlign: 'center', marginTop: '0.3rem' }}>
+              <button onClick={() => { setRangeStart(null); setRangeEnd(null) }}
+                style={{ background: 'none', border: 'none', color: 'var(--cream-muted)', fontSize: '0.7rem', cursor: 'pointer', textDecoration: 'underline', fontFamily: 'var(--font-body)' }}>
+                Clear selection
+              </button>
+            </p>
+          )}
         </div>
       )}
 
@@ -311,15 +384,15 @@ function EnquiryModal({ vendor, onClose, onSuccess }) {
 }
 
 // ── Booking modal ──────────────────────────────────────────────────────────────
-function BookingModal({ vendor, packages, availability, selectedDate, onClose, onSuccess }) {
+function BookingModal({ vendor, packages, availability, selectedDate, preStartHour, preEndHour, onClose, onSuccess }) {
   const { user } = useAuthStore()
   const show     = useToastStore(s => s.show)
   const [dateNotFixed, setDateNotFixed] = useState(!selectedDate)
   const [day, setDay]       = useState(selectedDate ? selectedDate.getDate() : '')
   const [month, setMonth]   = useState(selectedDate ? selectedDate.getMonth() : new Date().getMonth())
   const [year, setYear]     = useState(selectedDate ? selectedDate.getFullYear() : new Date().getFullYear())
-  const [startHour, setStartHour] = useState('')
-  const [endHour, setEndHour]     = useState('')
+  const [startHour, setStartHour] = useState(preStartHour != null ? String(preStartHour) : '')
+  const [endHour, setEndHour]     = useState(preEndHour != null ? String(preEndHour) : '')
   const [budgetRange, setBudgetRange] = useState('')
   const [packageId, setPackageId] = useState('')
   const [note, setNote]           = useState('')
@@ -490,6 +563,8 @@ export default function VendorProfile() {
   const [shortlisted, setShortlisted] = useState(false)
   const [loading,     setLoading]     = useState(true)
   const [bookingDate,   setBookingDate]   = useState(null) // opens modal when set
+  const [bookingStart,  setBookingStart]  = useState(null) // pre-selected start hour
+  const [bookingEnd,    setBookingEnd]    = useState(null) // pre-selected end hour
   const [lightbox,      setLightbox]      = useState(null) // { url, caption }
   const [showEnquiry,   setShowEnquiry]   = useState(false)
   const [showBookNow,   setShowBookNow]   = useState(false)
@@ -705,6 +780,14 @@ export default function VendorProfile() {
                 availability={availability}
                 onSelectDate={d => {
                   if (!user) { show('Sign in to book a date', 'error'); return }
+                  setBookingStart(null)
+                  setBookingEnd(null)
+                  setBookingDate(d)
+                }}
+                onSelectTimeRange={(d, start, end) => {
+                  if (!user) { show('Sign in to book a date', 'error'); return }
+                  setBookingStart(start)
+                  setBookingEnd(end)
                   setBookingDate(d)
                 }}
               />
@@ -747,8 +830,10 @@ export default function VendorProfile() {
           packages={packages}
           availability={availability}
           selectedDate={bookingDate}
-          onClose={() => setBookingDate(null)}
-          onSuccess={() => setBookingDate(null)}
+          preStartHour={bookingStart}
+          preEndHour={bookingEnd}
+          onClose={() => { setBookingDate(null); setBookingStart(null); setBookingEnd(null) }}
+          onSuccess={() => { setBookingDate(null); setBookingStart(null); setBookingEnd(null) }}
         />
       )}
 
