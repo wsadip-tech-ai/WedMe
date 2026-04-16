@@ -1,0 +1,21 @@
+{
+  "generatedAt": "2026-03-29T09:33:00.885Z",
+  "totalBytes": 28219,
+  "assets": [
+    {
+      "endpoint": "/index.min.html",
+      "ms": 15.3,
+      "bytes": 7403
+    },
+    {
+      "endpoint": "/styles.min.css",
+      "ms": 3.3,
+      "bytes": 14261
+    },
+    {
+      "endpoint": "/app.min.js",
+      "ms": 1.4,
+      "bytes": 6555
+    }
+  ]
+}

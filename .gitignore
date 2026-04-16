@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+.next/
+out/
+build/
+dist/
+
+# Environment & secrets
+.env
+.env.*
+!.env.example
+
+# Python (engine if added later)
+__pycache__/
+*.pyc
+venv/
+
+# Internal coordination & sensitive (kept local)
+pitch-notes.txt
+drafts/
+gen.py
+gen_plans.py
+gen_s2.py
+.agents/
+.superpowers/
+.claude/
+HEARTBEAT.md
+SOUL.md
+TOOLS.md
+USER.md
+MEMORY.md
+memory/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+
+# Vercel
+.vercel

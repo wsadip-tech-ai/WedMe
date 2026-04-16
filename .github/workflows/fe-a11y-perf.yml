@@ -1,0 +1,31 @@
+name: FE A11y & Perf Smoke
+
+on:
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  a11y-perf:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: A11y check
+        run: node frontend/scripts/a11y-lint.mjs
+      - name: Perf smoke with size budget
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUTPUT=$(node frontend/scripts/perf-smoke.mjs | tee /dev/stderr)
+          TOTAL=$(echo "$OUTPUT" | awk '/^TOTAL/{print $2}' | tr -d 'B')
+          : "${TOTAL:=0}"
+          echo "Total bytes: $TOTAL"
+          if [ "$TOTAL" -gt 30720 ]; then
+            echo "? Size budget exceeded: $TOTAL > 30720" >&2
+            exit 1
+          fi
+          echo "? Size within budget"
